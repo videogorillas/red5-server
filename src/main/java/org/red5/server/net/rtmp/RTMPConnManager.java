@@ -18,7 +18,7 @@
 
 package org.red5.server.net.rtmp;
 
-import java.lang.management.ManagementFactory;
+//import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -214,14 +214,14 @@ public class RTMPConnManager implements IConnectionManager<RTMPConnection>, Appl
         log.debug("Connection id: {} session id hash: {}", conn.getId(), conn.getSessionId().hashCode());
         if (debug) {
             log.info("Connection count (map): {}", connMap.size());
-            try {
-                RTMPMinaTransportMXBean proxy = JMX.newMXBeanProxy(ManagementFactory.getPlatformMBeanServer(), new ObjectName("org.red5.server:type=RTMPMinaTransport"), RTMPMinaTransportMXBean.class, true);
-                if (proxy != null) {
-                    log.info("{}", proxy.getStatistics());
-                }
-            } catch (Exception e) {
-                log.warn("Error on jmx lookup", e);
-            }
+//            try {
+//                RTMPMinaTransportMXBean proxy = JMX.newMXBeanProxy(ManagementFactory.getPlatformMBeanServer(), new ObjectName("org.red5.server:type=RTMPMinaTransport"), RTMPMinaTransportMXBean.class, true);
+//                if (proxy != null) {
+//                    log.info("{}", proxy.getStatistics());
+//                }
+//            } catch (Exception e) {
+//                log.warn("Error on jmx lookup", e);
+//            }
         }
     }
 

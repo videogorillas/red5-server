@@ -21,7 +21,7 @@ package org.red5.server.net.rtmp;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 
-import org.apache.commons.codec.binary.Hex;
+import android.org.apache.commons.codec.binary.Hex;
 import org.apache.mina.core.buffer.IoBuffer;
 import org.apache.mina.core.future.CloseFuture;
 import org.apache.mina.core.future.IoFutureListener;
