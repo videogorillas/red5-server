@@ -19,13 +19,14 @@
 
 package org.red5.server.session;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 
-import android.org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.red5.server.api.scheduling.IScheduledJob;
 import org.red5.server.api.scheduling.ISchedulingService;
@@ -33,6 +34,8 @@ import org.red5.server.api.session.ISession;
 import org.red5.server.util.PropertyConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import android.org.apache.commons.codec.binary.Hex;
 
 /**
  * Manages sessions.
@@ -122,7 +125,11 @@ public class SessionManager {
     }
 
     public static String createHash(String str) {
-        return DigestUtils.md5Hex(str.getBytes());
+        try {
+            return Hex.encodeHexString(MessageDigest.getInstance("MD5").digest(str.getBytes()));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /**
