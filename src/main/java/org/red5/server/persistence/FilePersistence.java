@@ -444,7 +444,9 @@ public class FilePersistence extends RamPersistence {
                     result.deserialize(in);
                 }
             } finally {
-                buf.free();
+                if (buf != null) {
+                    buf.free();
+                }
                 buf = null;
             }
             if (result.getStore() != this) {
