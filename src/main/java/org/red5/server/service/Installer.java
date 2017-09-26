@@ -30,12 +30,6 @@ import javax.management.MBeanServer;
 import javax.management.ObjectName;
 import javax.servlet.ServletException;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.conn.HttpHostConnectException;
-import org.apache.http.util.EntityUtils;
 import org.red5.compatibility.flex.messaging.messages.AcknowledgeMessage;
 import org.red5.compatibility.flex.messaging.messages.AsyncMessage;
 import org.red5.logging.Red5LoggerFactory;
@@ -46,6 +40,13 @@ import org.red5.server.jmx.mxbeans.LoaderMXBean;
 import org.red5.server.util.FileUtil;
 import org.red5.server.util.HttpConnectionUtil;
 import org.slf4j.Logger;
+
+import okhttp3.Call;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Request.Builder;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 /**
  * This service provides the means to list, download, install, and un-install applications from a given url.
@@ -104,20 +105,21 @@ public final class Installer {
     public AsyncMessage getApplicationList() {
         AcknowledgeMessage result = new AcknowledgeMessage();
         // create a singular HttpClient object
-        HttpClient client = HttpConnectionUtil.getClient();
+        OkHttpClient client = HttpConnectionUtil.getClient();
         //setup GET
-        HttpGet method = null;
+        Call call = null;
         try {
             //get registry file
-            method = new HttpGet(applicationRepositoryUrl + "registry.xml");
+            Builder method = new Request.Builder().url(applicationRepositoryUrl + "registry.xml").get();
             // execute the method
-            HttpResponse response = client.execute(method);
-            int code = response.getStatusLine().getStatusCode();
+            call = client.newCall(method.build());
+            Response response = call.execute();
+            int code = response.code();
             log.debug("HTTP response code: {}", code);
             if (code == 200) {
-                HttpEntity entity = response.getEntity();
+                ResponseBody entity = response.body();
                 if (entity != null) {
-                    String responseText = EntityUtils.toString(entity);
+                    String responseText = entity.string();
                     log.debug("Response: {}", responseText);
                     //prepare response for flex			
                     result.body = responseText;
@@ -143,15 +145,10 @@ public final class Installer {
                     HttpConnectionUtil.handleError(response);
                 }
             }
-        } catch (HttpHostConnectException he) {
-            log.error("Http error connecting to {}", applicationRepositoryUrl, he);
-            if (method != null) {
-                method.abort();
-            }
         } catch (IOException ioe) {
             log.error("Unable to connect to {}", applicationRepositoryUrl, ioe);
-            if (method != null) {
-                method.abort();
+            if (call != null) {
+                call.cancel();
             }
         }
         return result;
@@ -219,43 +216,39 @@ public final class Installer {
             //if the file was not found then download it
             if (!result) {
                 // create a singular HttpClient object
-                HttpClient client = HttpConnectionUtil.getClient();
+                OkHttpClient client = HttpConnectionUtil.getClient();
                 //setup GET
-                HttpGet method = null;
+                Call call = null;
                 FileOutputStream fos = null;
                 try {
                     //try the war version first
-                    method = new HttpGet(applicationRepositoryUrl + applicationWarName);
+                    Builder method = new Request.Builder().url(applicationRepositoryUrl + applicationWarName).get();
                     //we dont want any transformation - RFC2616
                     method.addHeader("Accept-Encoding", "identity");
                     // execute the method
-                    HttpResponse response = client.execute(method);
-                    int code = response.getStatusLine().getStatusCode();
+                    call = client.newCall(method.build());
+                    Response response = call.execute();
+                    int code = response.code();
                     log.debug("HTTP response code: {}", code);
                     if (code == 200) {
-                        HttpEntity entity = response.getEntity();
+                        ResponseBody entity = response.body();
                         if (entity != null) {
                             //create output file
                             fos = new FileOutputStream(srcDir + '/' + applicationWarName);
                             log.debug("Writing response to {}/{}", srcDir, applicationWarName);
                             // have to receive the response as a byte array.  This has the advantage of writing to the file system
                             // faster and it also works on macs ;)
-                            byte[] buf = EntityUtils.toByteArray(entity);
+                            byte[] buf = entity.bytes();
                             fos.write(buf);
                             fos.flush();
                             // we should be good to go
                             result = true;
                         }
                     }
-                } catch (HttpHostConnectException he) {
-                    log.error("Http error connecting to {}", applicationRepositoryUrl, he);
-                    if (method != null) {
-                        method.abort();
-                    }
                 } catch (IOException ioe) {
                     log.error("Unable to connect to {}", applicationRepositoryUrl, ioe);
-                    if (method != null) {
-                        method.abort();
+                    if (call != null) {
+                        call.cancel();
                     }
                 } finally {
                     if (fos != null) {

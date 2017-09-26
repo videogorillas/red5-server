@@ -26,17 +26,19 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.util.EntityUtils;
 import org.apache.mina.core.buffer.IoBuffer;
 import org.red5.logging.Red5LoggerFactory;
 import org.red5.server.util.HttpConnectionUtil;
 import org.slf4j.Logger;
+
+import okhttp3.Call;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
+import okio.ByteString;
 
 /**
  * Servlet to tunnel to the AMF gateway servlet.
@@ -76,11 +78,11 @@ public class AMFTunnelServlet extends HttpServlet {
      */
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        HttpClient client = HttpConnectionUtil.getClient(connectionTimeout);
+        OkHttpClient client = HttpConnectionUtil.getClient(connectionTimeout);
         //setup POST
-        HttpPost post = null;
+        Call call = null;
         try {
-            post = new HttpPost(postAcceptorURL);
+            Request.Builder post = new Request.Builder().url(postAcceptorURL);
             String path = req.getContextPath();
             if (path == null) {
                 path = "";
@@ -96,20 +98,20 @@ public class AMFTunnelServlet extends HttpServlet {
                 IoBuffer reqBuffer = IoBuffer.allocate(reqContentLength);
                 ServletUtils.copy(req, reqBuffer.asOutputStream());
                 reqBuffer.flip();
-                post.setEntity(new InputStreamEntity(reqBuffer.asInputStream(), reqContentLength));
-                post.addHeader("Content-Type", REQUEST_TYPE);
+                post.post(RequestBody.create(MediaType.parse(REQUEST_TYPE), ByteString.read(reqBuffer.asInputStream(), reqContentLength)));
                 // get.setPath(path);
                 post.addHeader("Tunnel-request", path);
                 // execute the method
-                HttpResponse response = client.execute(post);
-                int code = response.getStatusLine().getStatusCode();
+                call = client.newCall(post.build());
+                Response response = call.execute();
+                int code = response.code();
                 log.debug("HTTP response code: {}", code);
-                if (code == HttpStatus.SC_OK) {
-                    HttpEntity entity = response.getEntity();
+                if (code == 200) {
+                    ResponseBody entity = response.body();
                     if (entity != null) {
                         resp.setContentType(REQUEST_TYPE);
                         // get the response as bytes
-                        byte[] bytes = EntityUtils.toByteArray(entity);
+                        byte[] bytes = entity.bytes();
                         IoBuffer resultBuffer = IoBuffer.wrap(bytes);
                         resultBuffer.flip();
                         ServletUtils.copy(resultBuffer.asInputStream(), resp.getOutputStream());
@@ -119,12 +121,12 @@ public class AMFTunnelServlet extends HttpServlet {
                     resp.sendError(code);
                 }
             } else {
-                resp.sendError(HttpStatus.SC_BAD_REQUEST);
+                resp.sendError(400);
             }
         } catch (Exception ex) {
             log.error("", ex);
-            if (post != null) {
-                post.abort();
+            if (call != null) {
+                call.cancel();
             }
         }
     }
