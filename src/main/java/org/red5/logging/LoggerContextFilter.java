@@ -72,18 +72,18 @@ public class LoggerContextFilter implements Filter {
     }
 
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        LoggerContext context = (LoggerContext) request.getServletContext().getAttribute(Red5LoggerFactory.LOGGER_CONTEXT_ATTRIBUTE);
-        // get the selector
-        ContextSelector selector = Red5LoggerFactory.getContextSelector();
-        if (context != null) {
-            // set the thread local ref
-            ((LoggingContextSelector) selector).setLocalContext(context);
-        } else {
-            System.err.printf("No context named %s was found%n", contextName);
-        }
-        chain.doFilter(request, response);
-        // remove the thread local ref so that log contexts dont use the wrong contextName
-        ((LoggingContextSelector) selector).removeLocalContext();
+//        LoggerContext context = (LoggerContext) request.getServletContext().getAttribute(Red5LoggerFactory.LOGGER_CONTEXT_ATTRIBUTE);
+//        // get the selector
+//        ContextSelector selector = Red5LoggerFactory.getContextSelector();
+//        if (context != null) {
+//            // set the thread local ref
+//            ((LoggingContextSelector) selector).setLocalContext(context);
+//        } else {
+//            System.err.printf("No context named %s was found%n", contextName);
+//        }
+//        chain.doFilter(request, response);
+//        // remove the thread local ref so that log contexts dont use the wrong contextName
+//        ((LoggingContextSelector) selector).removeLocalContext();
     }
 
     public void destroy() {
